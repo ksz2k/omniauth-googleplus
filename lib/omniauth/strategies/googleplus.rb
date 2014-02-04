@@ -13,8 +13,10 @@ module OmniAuth
       #   from https://developers.google.com/+/api/oauth
       DEFAULT_SCOPE = "plus.login"
       
+      DEFAULT_ACTIONS = ""
+      
       option :name, 'googleplus'
-      option :authorize_options, [:scope, :approval_prompt, :access_type, :state, :hd]
+      option :authorize_options, [:scope, :approval_prompt, :access_type, :state, :hd, :request_visible_actions]
 
       option :client_options, {
         :site          => 'https://accounts.google.com',
@@ -24,14 +26,20 @@ module OmniAuth
 
       def authorize_params
         base_scope_url = "https://www.googleapis.com/auth/"
+        base_action_url = "http://schemas.google.com/"
         super.tap do |params|
           # Read the params if passed directly to omniauth_authorize_path
-          %w(scope approval_prompt access_type state hd).each do |k|
+          %w(scope approval_prompt access_type state hd request_visible_actions).each do |k|
             params[k.to_sym] = request.params[k] unless [nil, ''].include?(request.params[k])
           end
           scopes = (params[:scope] || DEFAULT_SCOPE).split(",")
           scopes.map! { |s| s =~ /^https?:\/\// ? s : "#{base_scope_url}#{s}" }
-          params[:scope] = scopes.join(' ')
+          params[:scope] = scopes.join(' ')          
+          if (params[:request_visible_actions])
+            actions = (params[:request_visible_actions] || DEFAULT_ACTIONS).split(",")
+            actions.map! { |s| s =~ /^https?:\/\// ? s : "#{base_action_url}#{s}" }
+            params[:request_visible_actions] = actions.join(' ')
+          end           
           # This makes sure we get a refresh_token.
           # http://googlecode.blogspot.com/2011/10/upcoming-changes-to-oauth-20-endpoint.html
           params[:access_type] = 'offline' if params[:access_type].nil?
